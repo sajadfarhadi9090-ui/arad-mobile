@@ -1,0 +1,6 @@
+{
+  "name": "موبایل آراد - Mobile Arad",
+  "description": "فروشگاه تخصصی خرید و فروش آنلاین موبایل‌های نو و کارکرده، طرح تعویض و کارشناسی ۶۰‌گانه گوشی",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
