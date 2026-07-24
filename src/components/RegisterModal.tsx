@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, ArrowRight, X, CheckCircle2, ShieldCheck, User, AlertCircle, Sparkles, LogOut, UserCheck, RefreshCw } from 'lucide-react';
+import { Mail, ArrowRight, X, CheckCircle2, ShieldCheck, User, AlertCircle, Sparkles, LogOut, UserCheck, RefreshCw, Lock, Eye, EyeOff } from 'lucide-react';
 
 interface RegisterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSaveEmail: (email: string, name: string) => void;
+  onSaveEmail: (email: string, name: string, password: string) => void;
   onLogout?: () => void;
   currentUserEmail?: string;
   currentUserName?: string;
+  currentUserPassword?: string;
 }
 
 export const RegisterModal: React.FC<RegisterModalProps> = ({
@@ -17,9 +18,13 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
   onLogout,
   currentUserEmail = '',
   currentUserName = '',
+  currentUserPassword = '',
 }) => {
   const [email, setEmail] = useState<string>(currentUserEmail);
   const [fullName, setFullName] = useState<string>(currentUserName);
+  const [password, setPassword] = useState<string>(currentUserPassword);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [showCurrentPass, setShowCurrentPass] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [isSubmitted, setIsSubmitted] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -28,11 +33,14 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
     if (isOpen) {
       setEmail(currentUserEmail || '');
       setFullName(currentUserName || '');
+      setPassword(currentUserPassword || '');
       setIsSubmitted(false);
       setError('');
       setIsEditing(false);
+      setShowPassword(false);
+      setShowCurrentPass(false);
     }
-  }, [isOpen, currentUserEmail, currentUserName]);
+  }, [isOpen, currentUserEmail, currentUserName, currentUserPassword]);
 
   if (!isOpen) return null;
 
@@ -47,6 +55,8 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
     setError('');
 
     const cleanEmail = email.trim();
+    const cleanPassword = password.trim();
+
     if (!cleanEmail) {
       setError('لطفا آدرس ایمیل خود را وارد کنید.');
       return;
@@ -57,7 +67,12 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
       return;
     }
 
-    onSaveEmail(cleanEmail, fullName.trim() || 'کاربر گرامی');
+    if (!cleanPassword || cleanPassword.length < 4) {
+      setError('لطفا یک رمز عبور معتبر (حداقل ۴ کاراکتر) برای حساب خود تعیین کنید.');
+      return;
+    }
+
+    onSaveEmail(cleanEmail, fullName.trim() || 'کاربر گرامی', cleanPassword);
     setIsSubmitted(true);
     setIsEditing(false);
   };
@@ -68,6 +83,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
     }
     setEmail('');
     setFullName('');
+    setPassword('');
     setIsEditing(false);
     setIsSubmitted(false);
   };
@@ -114,7 +130,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
         <div className="p-6 overflow-y-auto flex-1 space-y-6">
           
           {currentUserEmail && !isEditing && !isSubmitted ? (
-            /* LOGGED IN ACCOUNT VIEW WITH LOGOUT BUTTON */
+            /* LOGGED IN ACCOUNT VIEW WITH LOGOUT BUTTON & PASSWORD DISPLAY */
             <div className="space-y-6">
               <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
@@ -139,10 +155,28 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                       <span className="text-white font-bold">{currentUserName}</span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center py-1">
+                  <div className="flex justify-between items-center py-1 border-b border-slate-900">
                     <span className="text-slate-400">ایمیل ثبت‌شده:</span>
                     <span className="text-amber-400 font-mono font-bold dir-ltr">{currentUserEmail}</span>
                   </div>
+                  {currentUserPassword && (
+                    <div className="flex justify-between items-center py-1">
+                      <span className="text-slate-400">رمز عبور حساب:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-200 font-mono font-bold dir-ltr">
+                          {showCurrentPass ? currentUserPassword : '••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPass(!showCurrentPass)}
+                          className="text-slate-400 hover:text-amber-400 transition"
+                          title={showCurrentPass ? 'مخفی کردن' : 'نمایش رمز'}
+                        >
+                          {showCurrentPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -152,7 +186,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   className="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold py-3 rounded-xl text-xs transition flex items-center justify-center gap-2"
                 >
                   <RefreshCw className="w-4 h-4 text-amber-400" />
-                  <span>تغییر یا ویرایش ایمیل</span>
+                  <span>تغییر ایمیل یا رمز عبور</span>
                 </button>
 
                 <button
@@ -174,7 +208,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
               <div className="space-y-2">
                 <h3 className="text-lg font-black text-white">ثبت‌نام با موفقیت انجام شد!</h3>
                 <p className="text-xs text-slate-300 leading-relaxed max-w-sm mx-auto">
-                  ایمیل <span className="text-amber-400 font-bold dir-ltr inline-block">{email}</span> در سیستم ثبت گردید. حساب کاربری شما فعال شد.
+                  حساب کاربری شما با ایمیل <span className="text-amber-400 font-bold dir-ltr inline-block">{email}</span> و رمز عبور تعیین‌شده ذخیره گردید.
                 </p>
               </div>
 
@@ -195,9 +229,9 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   <Sparkles className="w-5 h-5" />
                 </div>
                 <div className="space-y-1">
-                  <h4 className="text-xs font-black text-amber-400">مزایای ثبت‌نام با ایمیل واقعی</h4>
+                  <h4 className="text-xs font-black text-amber-400">ثبت‌نام و ساخت حساب کاربری</h4>
                   <p className="text-[11px] text-slate-300 leading-relaxed">
-                    دریافت فاکتور رسمی، پیگیری لحظه‌ای مرسوله‌های پستی و اطلاع از جدیدترین موجودی گوشی‌های استوک و نو.
+                    با وارد کردن ایمیل واقعی و تعیین رمز عبور اختصاصی، حساب کاربری شما ایجاد و به صورت امن ذخیره می‌شود.
                   </p>
                 </div>
               </div>
@@ -221,7 +255,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                 <div className="space-y-1.5">
                   <label className="text-xs text-slate-300 font-bold flex items-center gap-1.5">
                     <Mail className="w-3.5 h-3.5 text-amber-400" />
-                    <span>آدرس ایمیل واقعی (برای دریافت فاکتور و پیگیری):</span>
+                    <span>آدرس ایمیل واقعی:</span>
                     <span className="text-amber-400 font-bold">*</span>
                   </label>
                   <input
@@ -234,6 +268,32 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                   />
                 </div>
 
+                <div className="space-y-1.5">
+                  <label className="text-xs text-slate-300 font-bold flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>رمز عبور حساب کاربری (جهت ورود مجدد):</span>
+                    <span className="text-amber-400 font-bold">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                      placeholder="رمز عبور دلخواه (حداقل ۴ کاراکتر)"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl pr-4 pl-10 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500 dir-ltr text-left font-mono transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute left-3 top-2.5 text-slate-400 hover:text-white"
+                      title={showPassword ? 'مخفی کردن' : 'نمایش رمز'}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
                 {error && (
                   <div className="bg-rose-500/10 border border-rose-500/30 p-3 rounded-xl flex items-center gap-2 text-rose-400 text-xs font-medium">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -243,7 +303,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
 
                 <div className="flex items-center gap-2 text-[11px] text-slate-400 pt-1">
                   <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <span>اطلاعات شما نزد موبایل آراد کاملاً محفوظ است و اسپم ارسال نخواهد شد.</span>
+                  <span>اطلاعات و رمز عبور شما به صورت امن ذخیره می‌گردد.</span>
                 </div>
 
                 <div className="flex flex-col gap-2 pt-2">
@@ -251,7 +311,7 @@ export const RegisterModal: React.FC<RegisterModalProps> = ({
                     type="submit"
                     className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2"
                   >
-                    <span>ثبت ایمیل و ایجاد حساب</span>
+                    <span>ثبت‌نام و ذخیره حساب</span>
                     <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                   </button>
 

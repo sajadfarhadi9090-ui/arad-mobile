@@ -27,9 +27,13 @@ import {
   CheckCircle2,
   Clock,
   ArrowUpRight,
-  ArrowRight
+  ArrowRight,
+  Users,
+  UserCheck,
+  Key,
+  Copy
 } from 'lucide-react';
-import { Product, PhoneCondition, PhoneBrand, UsedGrade } from '../types';
+import { Product, PhoneCondition, PhoneBrand, UsedGrade, RegisteredUser } from '../types';
 import { formatToman, toPersianDigits } from '../utils/formatters';
 
 interface AdminPanelModalProps {
@@ -39,6 +43,9 @@ interface AdminPanelModalProps {
   onAddProduct: (newProd: Product) => void;
   onUpdateProduct: (updatedProd: Product) => void;
   onDeleteProduct: (id: string) => void;
+  registeredUsers?: RegisteredUser[];
+  onDeleteRegisteredUser?: (id: string) => void;
+  onClearRegisteredUsers?: () => void;
 }
 
 const PRESET_GALLERY = [
@@ -115,6 +122,9 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   onAddProduct,
   onUpdateProduct,
   onDeleteProduct,
+  registeredUsers = [],
+  onDeleteRegisteredUser,
+  onClearRegisteredUsers,
 }) => {
   // Password Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -132,13 +142,27 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
   const [passMessage, setPassMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
   // Tab State
-  const [tab, setTab] = useState<'list' | 'add' | 'edit' | 'sales_stats' | 'purchases_stats' | 'security'>('list');
+  const [tab, setTab] = useState<'list' | 'add' | 'edit' | 'sales_stats' | 'purchases_stats' | 'registered_users' | 'security'>('list');
 
   // Currently Editing Product
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
 
   // Search filter inside inventory list
   const [inventorySearch, setInventorySearch] = useState<string>('');
+
+  // Registered Users Filter and Passwords visibility
+  const [userSearchQuery, setUserSearchQuery] = useState<string>('');
+  const [visiblePasswords, setVisiblePasswords] = useState<{ [id: string]: boolean }>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setVisiblePasswords((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const filteredUsers = registeredUsers.filter((u) => 
+    (u.name && u.name.toLowerCase().includes(userSearchQuery.toLowerCase())) ||
+    (u.email && u.email.toLowerCase().includes(userSearchQuery.toLowerCase())) ||
+    (u.password && u.password.toLowerCase().includes(userSearchQuery.toLowerCase()))
+  );
 
   // Form state for Add/Edit
   const [titleFa, setTitleFa] = useState('');
@@ -175,7 +199,7 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
 
   // Helper to get active admin password
   const getStoredPassword = (): string => {
-    return localStorage.getItem('mobile_arad_admin_password') || 'arad123';
+    return localStorage.getItem('mobile_arad_admin_password') || localStorage.getItem('arad_admin_password') || 'arad123';
   };
 
   // Reset states when modal is closed
@@ -231,10 +255,11 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
     }
 
     localStorage.setItem('mobile_arad_admin_password', newPass);
+    localStorage.setItem('arad_admin_password', newPass);
     setCurrentPass('');
     setNewPass('');
     setConfirmPass('');
-    setPassMessage({ text: 'رمز عبور مدیریت با موفقیت تغییر کرد!', isError: false });
+    setPassMessage({ text: 'رمز عبور مدیریت با موفقیت تغییر کرد و ذخیره شد!', isError: false });
   };
 
   // Handle File Upload from device
@@ -607,6 +632,19 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
               >
                 <RotateCcw className="w-4 h-4 text-blue-400" />
                 آمار خرید از مردم (کارکرده)
+              </button>
+
+              <button
+                onClick={() => setTab('registered_users')}
+                className={`px-3.5 py-2 rounded-xl font-bold transition flex items-center gap-1.5 shrink-0 ${
+                  tab === 'registered_users' ? 'bg-amber-500 text-slate-950 shadow' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Users className="w-4 h-4 text-amber-400" />
+                <span>کاربران ثبت‌نامی</span>
+                <span className="px-1.5 py-0.5 rounded-md bg-slate-900/80 text-[10px] text-amber-300 font-extrabold dir-ltr">
+                  {toPersianDigits(registeredUsers.length)}
+                </span>
               </button>
 
               <button
@@ -1175,6 +1213,138 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                 </div>
               )}
 
+              {/* TAB 5.5: REGISTERED USERS MANAGEMENT */}
+              {tab === 'registered_users' && (
+                <div className="space-y-6">
+                  {/* Top Header Banner */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-950 p-4 rounded-2xl border border-slate-800">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                        <Users className="w-5 h-5 text-amber-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-extrabold text-white">لیست و رمز عبور کاربران ثبت‌نام شده</h3>
+                        <p className="text-[11px] text-slate-400 font-medium">مشاهده، بررسی و مدیریت ایمیل‌ها و پسوورد حساب‌های کاربری مردم</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span className="px-3.5 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-xs font-bold text-amber-400 flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-emerald-400" />
+                        <span>تعداد کل کاربران:</span>
+                        <span className="font-mono text-sm">{toPersianDigits(registeredUsers.length)} نفر</span>
+                      </span>
+
+                      {registeredUsers.length > 0 && onClearRegisteredUsers && (
+                        <button
+                          onClick={() => {
+                            if (window.confirm('آیا از پاک کردن کل لیست کاربران ثبت‌نامی اطمینان دارید؟')) {
+                              onClearRegisteredUsers();
+                            }
+                          }}
+                          className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>حذف کلی همه</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Search Input Bar */}
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="جستجو در لیست بر اساس نام، ایمیل یا رمز عبور..."
+                      value={userSearchQuery}
+                      onChange={(e) => setUserSearchQuery(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl py-2.5 pr-10 pl-4 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500 transition"
+                    />
+                    <Search className="w-4 h-4 text-slate-500 absolute right-3 top-3" />
+                  </div>
+
+                  {/* Users Table */}
+                  {filteredUsers.length === 0 ? (
+                    <div className="p-10 text-center bg-slate-950/50 rounded-2xl border border-slate-800 space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500 mx-auto">
+                        <Users className="w-6 h-6" />
+                      </div>
+                      <p className="text-xs text-slate-400 font-bold">هیچ کاربری ثبت‌نام نکرده یا مورد جستجو یافت نشد.</p>
+                      <p className="text-[11px] text-slate-500">کاربران به محض ثبت ایمیل و رمز عبور در سایت، در این جدول قرار می‌گیرند.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-950/60 rounded-2xl border border-slate-800 overflow-hidden shadow-xl">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-right text-xs">
+                          <thead className="bg-slate-950 text-slate-400 font-bold border-b border-slate-800 text-[11px]">
+                            <tr>
+                              <th className="p-3.5">نام و نام خانوادگی</th>
+                              <th className="p-3.5">آدرس ایمیل کاربر</th>
+                              <th className="p-3.5">رمز عبور حساب</th>
+                              <th className="p-3.5">تاریخ ثبت‌نام</th>
+                              <th className="p-3.5 text-center">عملیات</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/80">
+                            {filteredUsers.map((u) => {
+                              const showPass = visiblePasswords[u.id];
+                              return (
+                                <tr key={u.id} className="hover:bg-slate-900/60 transition">
+                                  <td className="p-3.5 font-bold text-white flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center font-black shrink-0 text-xs">
+                                      {u.name ? u.name.charAt(0) : 'ک'}
+                                    </div>
+                                    <span>{u.name || 'کاربر گرامی'}</span>
+                                  </td>
+
+                                  <td className="p-3.5 font-mono font-bold text-amber-400 dir-ltr text-left">
+                                    <span className="bg-amber-500/5 px-2.5 py-1 rounded-lg border border-amber-500/20 inline-block">
+                                      {u.email}
+                                    </span>
+                                  </td>
+
+                                  <td className="p-3.5 font-mono text-slate-200 dir-ltr text-left">
+                                    <div className="flex items-center gap-2 justify-end">
+                                      <span className="font-bold bg-slate-900 px-3 py-1 rounded-xl border border-slate-800 text-xs text-emerald-400 min-w-[100px] text-center inline-block">
+                                        {showPass ? u.password : '••••••••'}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => togglePasswordVisibility(u.id)}
+                                        className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-amber-400 transition"
+                                        title={showPass ? 'مخفی کردن رمز' : 'مشاهده رمز عبور'}
+                                      >
+                                        {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                                      </button>
+                                    </div>
+                                  </td>
+
+                                  <td className="p-3.5 text-slate-400 text-[11px] font-medium">
+                                    {u.registeredAt}
+                                  </td>
+
+                                  <td className="p-3.5 text-center">
+                                    {onDeleteRegisteredUser && (
+                                      <button
+                                        onClick={() => onDeleteRegisteredUser(u.id)}
+                                        className="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition shadow-sm"
+                                        title="حذف این کاربر"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* TAB 6: SECURITY & PASSWORD CHANGE */}
               {tab === 'security' && (
                 <div className="max-w-md mx-auto space-y-6 py-4">
@@ -1195,8 +1365,17 @@ export const AdminPanelModal: React.FC<AdminPanelModalProps> = ({
                     </div>
                     <h3 className="text-base font-extrabold text-white">تغییر رمز عبور ورود به پنل مدیریت</h3>
                     <p className="text-xs text-slate-400">
-                      جهت امنیت بیشتر، رمز عبور جدیدی تعیین نمایید.
+                      رمز عبور مدیریت به طور کامل در مرورگر شما ذخیره و ماندگار می‌گردد.
                     </p>
+                  </div>
+
+                  {/* Active Saved Password Display Box */}
+                  <div className="bg-slate-950 p-4 rounded-2xl border border-amber-500/30 text-center space-y-1">
+                    <span className="text-[11px] text-slate-400 font-bold block">رمز عبور فعلی ثبت‌شده مدیریت در مرورگر:</span>
+                    <div className="text-amber-400 font-mono font-black text-sm tracking-widest dir-ltr py-1">
+                      {getStoredPassword()}
+                    </div>
+                    <p className="text-[10px] text-emerald-400 font-medium">✓ با رفرش صفحه نیز این پسوورد تغییر نخواهد کرد.</p>
                   </div>
 
                   <form onSubmit={handleChangePassword} className="space-y-4 text-xs">

@@ -79,3 +79,11 @@ export interface FilterState {
   sortBy: 'featured' | 'price-asc' | 'price-desc' | 'newest' | 'rating';
   inStockOnly: boolean;
 }
+
+export interface RegisteredUser {
+  id: string;
+  email: string;
+  password: string;
+  name: string;
+  registeredAt: string;
+}

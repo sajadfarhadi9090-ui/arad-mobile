@@ -14,7 +14,7 @@ import { GuaranteesBanner } from './components/GuaranteesBanner';
 import { Footer } from './components/Footer';
 
 import { INITIAL_PRODUCTS } from './data/products';
-import { Product, CartItem, FilterState, PhoneBrand } from './types';
+import { Product, CartItem, FilterState, PhoneBrand, RegisteredUser } from './types';
 import { SlidersHorizontal, ArrowUpDown, Smartphone, Search, RefreshCw, Filter, ArrowUp } from 'lucide-react';
 import { toPersianDigits } from './utils/formatters';
 
@@ -67,19 +67,91 @@ export default function App() {
   const [userName, setUserName] = useState<string>(() => {
     return localStorage.getItem('arad_user_name') || '';
   });
+  const [userPassword, setUserPassword] = useState<string>(() => {
+    return localStorage.getItem('arad_user_password') || '';
+  });
 
-  const handleSaveEmail = (email: string, name: string) => {
+  // Registered Users list state
+  const [registeredUsers, setRegisteredUsers] = useState<RegisteredUser[]>(() => {
+    const saved = localStorage.getItem('arad_registered_users');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [
+      {
+        id: 'u-1',
+        name: 'علی رضایی',
+        email: 'sajad.farhadi9090@gmail.com',
+        password: 'pass1234',
+        registeredAt: '۱۴۰۳/۰۴/۲۴ - ۱۸:۳۰',
+      },
+      {
+        id: 'u-2',
+        name: 'رضا محمدی',
+        email: 'reza.mohammadi@gmail.com',
+        password: 'mypassword789',
+        registeredAt: '۱۴۰۳/۰۴/۲۳ - ۱۲:۱۵',
+      },
+    ];
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('arad_registered_users', JSON.stringify(registeredUsers));
+  }, [registeredUsers]);
+
+  const handleSaveEmail = (email: string, name: string, password: string) => {
     setUserEmail(email);
     setUserName(name);
+    setUserPassword(password);
     localStorage.setItem('arad_user_email', email);
     localStorage.setItem('arad_user_name', name);
+    localStorage.setItem('arad_user_password', password);
+
+    setRegisteredUsers((prev) => {
+      const existingIdx = prev.findIndex((u) => u.email.toLowerCase() === email.toLowerCase());
+      const nowPersian = new Date().toLocaleDateString('fa-IR') + ' - ' + new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+      
+      if (existingIdx >= 0) {
+        const updated = [...prev];
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          name: name || updated[existingIdx].name,
+          password: password,
+          registeredAt: nowPersian,
+        };
+        return updated;
+      } else {
+        const newUser: RegisteredUser = {
+          id: 'u-' + Date.now(),
+          email,
+          name: name || 'کاربر گرامی',
+          password,
+          registeredAt: nowPersian,
+        };
+        return [newUser, ...prev];
+      }
+    });
   };
 
   const handleLogout = () => {
     setUserEmail('');
     setUserName('');
+    setUserPassword('');
     localStorage.removeItem('arad_user_email');
     localStorage.removeItem('arad_user_name');
+    localStorage.removeItem('arad_user_password');
+  };
+
+  const handleDeleteRegisteredUser = (id: string) => {
+    setRegisteredUsers((prev) => prev.filter((u) => u.id !== id));
+  };
+
+  const handleClearRegisteredUsers = () => {
+    setRegisteredUsers([]);
   };
 
   // Cart & Comparison items
@@ -355,6 +427,9 @@ export default function App() {
         onAddProduct={handleAddProduct}
         onUpdateProduct={handleUpdateProduct}
         onDeleteProduct={handleDeleteProduct}
+        registeredUsers={registeredUsers}
+        onDeleteRegisteredUser={handleDeleteRegisteredUser}
+        onClearRegisteredUsers={handleClearRegisteredUsers}
       />
 
       <TrackingModal
@@ -369,6 +444,7 @@ export default function App() {
         onLogout={handleLogout}
         currentUserEmail={userEmail}
         currentUserName={userName}
+        currentUserPassword={userPassword}
       />
 
       {/* Floating Back to Top Button */}
